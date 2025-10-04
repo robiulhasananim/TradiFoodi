@@ -47,7 +47,7 @@ class LoginView(generics.GenericAPIView):
         password = request.data.get('password')
         user = authenticate(request, email=email, password=password)
 
-        if not user or user.role != 'buyer':
+        if not user :
             return Response(
                 success=False,
                 status_code=status.HTTP_401_UNAUTHORIZED,
