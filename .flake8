@@ -1,0 +1,4 @@
+[flake8]
+exclude = .git, */migrations/*, config/settings/*, config/asgi.py
+extend-ignore = F405, F811
+max-line-length = 88
