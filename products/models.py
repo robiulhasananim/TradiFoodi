@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.contrib.postgres.fields import ArrayField
 
 User = get_user_model()
 
@@ -25,7 +26,19 @@ class Product(models.Model):
     sold = models.PositiveIntegerField(default=0)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products')
     seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='products')
-    # images = models.URLField(blank=True, null=True, many=True)
+    
+    thumbnail = models.URLField(blank=True, null=True)
+    images = ArrayField(
+        base_field=models.URLField(),
+        blank=True,
+        null=True
+    )
+
+    sizes = ArrayField(
+        base_field=models.CharField(max_length=20),
+        blank=True,
+        null=True
+    )
     color = models.CharField(max_length=50, blank=True, null=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
     created_at = models.DateTimeField(auto_now_add=True)
