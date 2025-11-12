@@ -38,9 +38,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     # local 
-    'accounts',
-    'products',
-    'orders',
+    'account',
+    # 'products',
+    # 'orders',
 ]
 
 REST_FRAMEWORK = {
@@ -148,9 +148,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv())
 # CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', cast=Csv())
 
-AUTH_USER_MODEL = 'accounts.User'
+AUTH_USER_MODEL = 'account.User'
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
 }
+
+
+FRONTEND_URL = config('FRONTEND_URL')

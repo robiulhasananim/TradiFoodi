@@ -1,23 +1,25 @@
-
 from rest_framework.response import Response as DRFResponse
 
-def Response(success=True, status_code=200, message="Request successful", data=None):
+def Response(success=True, status=200, message="Request successful", data=None, errors=None):
     """
-    Utility function to generate a custom API response.
+    Custom API response for DRF without meta, with status inside JSON.
 
     Args:
-        success (bool): Indicates if the request was successful.
-        status_code (int): The HTTP status code.
-        message (str): A message to describe the response.
-        data (dict): The data payload to include in the response.
+        success (bool): Indicates if request was successful.
+        status (int): HTTP status code (also included in JSON).
+        message (str): Human-readable message describing the response.
+        data (dict or list): The main payload data of the response.
+        errors (dict): Validation or runtime errors.
 
     Returns:
-        Response: A Django REST Framework Response object with the custom structure.
+        DRF Response object with consistent API structure.
     """
     response = {
         "success": success,
-        "status_code": status_code,
+        "status": status,
         "message": message,
-        "data": data if data is not None else [],
+        "data": data if data is not None else {},
+        "errors": errors if errors is not None else {},
     }
-    return DRFResponse(response, status=status_code)
+
+    return DRFResponse(response, status=status)
