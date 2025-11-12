@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Product, Category
 from .serializers import ProductSerializer, CategorySerializer
 from django.utils.text import slugify
-from accounts.permissions import IsAdmin,IsSeller,IsAdminOrSellerForWriteReadOnlyOtherwise
+from account.permission import IsAdmin,IsSeller,IsAdminOrSeller,ReadOnlyOrAdmin,ReadOnlyOrAdminOrSeller
 from utils.helpers import Response
 
 
@@ -12,7 +12,7 @@ from utils.helpers import Response
 class CategoryListCreateView(generics.ListCreateAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAdminOrSellerForWriteReadOnlyOtherwise]
+    permission_classes = [ReadOnlyOrAdminOrSeller]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'slug']
 
@@ -27,27 +27,32 @@ class CategoryListCreateView(generics.ListCreateAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(
             success=True,
-            status_code=status.HTTP_200_OK,
+            status=status.HTTP_200_OK,
             message="Category list fetched successfully.",
             data=serializer.data
         )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+        if serializer.is_valid():
+            self.perform_create(serializer)
+            return Response(
+                success=True,
+                message="Category created successfully.",
+                data=serializer.data,
+                status=status.HTTP_201_CREATED
+            )
         return Response(
-            success=True,
-            message="Category created successfully.",
-            data=serializer.data,
-            status_code=status.HTTP_201_CREATED
-        )
-
+                success=False,
+                message="Category created Faild.",
+                status=status.HTTP_400_BAD_REQUEST,
+                errors=serializer.errors
+            )
 
 class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAdminOrSellerForWriteReadOnlyOtherwise]
+    permission_classes = [ReadOnlyOrAdminOrSeller]
 
     def perform_update(self, serializer):
         validated_data = serializer.validated_data
@@ -60,7 +65,7 @@ class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
         serializer = self.get_serializer(instance)
         return Response(
             success=True,
-            status_code=status.HTTP_200_OK,
+            status=status.HTTP_200_OK,
             message="Category details retrieved.",
             data=serializer.data
         )
@@ -73,7 +78,7 @@ class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
         self.perform_update(serializer)
         return Response(
             success=True,
-            status_code=status.HTTP_200_OK,
+            status=status.HTTP_200_OK,
             message="Category updated successfully.",
             data=serializer.data
         )
@@ -85,16 +90,21 @@ class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
             success=True,
             message="Category deleted successfully.",
             data=None,
-            status_code=status.HTTP_200_OK
+            status=status.HTTP_200_OK
         )
 
 # Product Views
-class ProductListView(generics.ListCreateAPIView):
-    queryset = Product.objects.all()
+class ProductListCreateView(generics.ListCreateAPIView):
+    queryset = Product.objects.filter()
     serializer_class = ProductSerializer
-    permission_classes = [IsAdminOrSellerForWriteReadOnlyOtherwise]
+    permission_classes = [ReadOnlyOrAdminOrSeller]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['category__id', 'price', 'color', 'status']
+    filterset_fields = {
+    'category__id': ['exact'],
+    'price': ['exact', 'gte', 'lte'],
+    'created_at': ['gte', 'lte'],
+    'is_active': ['exact'],
+    }
     search_fields = ['name', 'description']
     ordering_fields = ['price', 'sold', 'created_at']
 
@@ -106,7 +116,7 @@ class ProductListView(generics.ListCreateAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(
             success=True,
-            status_code=status.HTTP_200_OK,
+            status=status.HTTP_200_OK,
             message="Product list fetched successfully.",
             data=serializer.data
         )
@@ -119,19 +129,19 @@ class ProductListView(generics.ListCreateAPIView):
             success=True,
             message="Product created successfully.",
             data=serializer.data,
-            status_code=status.HTTP_201_CREATED
+            status=status.HTTP_201_CREATED
         )
 class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Product.objects.all()
+    queryset = Product.objects.filter()
     serializer_class = ProductSerializer
-    permission_classes = [IsAdminOrSellerForWriteReadOnlyOtherwise]
+    permission_classes = [ReadOnlyOrAdminOrSeller]
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
         return Response(
             success=True,
-            status_code=status.HTTP_200_OK,
+            status=status.HTTP_200_OK,
             message="Product details retrieved.",
             data=serializer.data
         )
@@ -141,7 +151,7 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
 
         # ensure seller owns this product
         if request.user != instance.seller and not request.user.is_admin:
-            return Response(success=False, message="Permission denied.", status_code=status.HTTP_403_FORBIDDEN)
+            return Response(success=False, message="Permission denied.", status=status.HTTP_403_FORBIDDEN)
 
         partial = kwargs.pop('partial', False)
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
@@ -158,12 +168,12 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
         instance = self.get_object()
 
         if request.user != instance.seller and not request.user.is_admin:
-            return Response(success=False, message="Permission denied.", status_code=status.HTTP_403_FORBIDDEN)
+            return Response(success=False, message="Permission denied.", status=status.HTTP_403_FORBIDDEN)
 
         self.perform_destroy(instance)
         return Response(
             success=True,
             message="Product deleted successfully.",
             data=None,
-            status_code=status.HTTP_200_OK
+            status=status.HTTP_200_OK
         )

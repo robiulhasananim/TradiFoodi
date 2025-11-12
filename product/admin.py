@@ -18,12 +18,12 @@ class ProductAdmin(admin.ModelAdmin):
         'sold', 
         'category', 
         'seller', 
-        'status', 
+        'is_active', 
         'thumbnail_preview', 
         'formatted_sizes',
         'created_at'
     )
-    list_filter = ('status', 'category', 'seller', 'created_at')
+    list_filter = ('is_active', 'category', 'seller', 'created_at')
     search_fields = ('name', 'description', 'color')
     readonly_fields = ('sold', 'created_at', 'updated_at')
     ordering = ('-created_at',)
@@ -32,7 +32,7 @@ class ProductAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Basic Info', {
-            'fields': ('name', 'description', 'category', 'seller', 'status')
+            'fields': ('name', 'description', 'category', 'seller', 'is_active')
         }),
         ('Inventory & Price', {
             'fields': ('price', 'stock', 'sold')

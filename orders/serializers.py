@@ -1,7 +1,7 @@
 from decimal import Decimal
 from rest_framework import serializers
 from .models import Order, OrderItem
-from products.models import Product
+from product.models import Product
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)

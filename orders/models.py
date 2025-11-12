@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from products.models import Product
+from product.models import Product
 
 User = settings.AUTH_USER_MODEL
 

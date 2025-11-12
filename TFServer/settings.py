@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django_filters',
     # local 
     'account',
-    # 'products',
+    'product',
     # 'orders',
 ]
 
