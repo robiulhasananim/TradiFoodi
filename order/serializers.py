@@ -135,6 +135,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
             # Deduct stock safely
             product.stock -= quantity
+            product.sold += quantity
             product.save()
 
             order_item = OrderItem.objects.create(
@@ -172,6 +173,10 @@ class OrderSerializer(serializers.ModelSerializer):
         # --- Permission check: only staff or role='admin' can update ---
         if not user or (not user.is_staff and getattr(user, 'role', None) != 'admin'):
             raise serializers.ValidationError("You don't have permission to modify this order.")
+        
+        # Prevent changing cancelled orders
+        if instance.status == 'cancelled':
+            raise serializers.ValidationError("This order has been cancelled and cannot be modified.")
 
         # --- Only allow status update ---
         allowed_fields = ['status', 'payment_status']
