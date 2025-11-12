@@ -10,7 +10,7 @@ django-cors-headers==4.9.0
 django-filter==25.1
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
-drf-spectacular==0.28.0
+drf-spectacular==0.29.0
 filelock==3.19.1
 flake8==7.3.0
 gunicorn==23.0.0
@@ -40,3 +40,4 @@ typing_extensions==4.15.0
 tzdata==2025.2
 uritemplate==4.2.0
 virtualenv==20.34.0
+whitenoise==6.11.0
