@@ -25,4 +25,5 @@ urlpatterns = [
     #local app 
     path('api/accounts/', include('account.urls')),
     path('api/products/', include('product.urls')),
+    path('api/orders/', include('order.urls')),
 ]
