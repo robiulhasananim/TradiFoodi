@@ -6,6 +6,8 @@ from .serializers import ProductSerializer, CategorySerializer
 from django.utils.text import slugify
 from account.permission import IsAdmin,IsSeller,IsAdminOrSeller,ReadOnlyOrAdmin,ReadOnlyOrAdminOrSeller
 from utils.helpers import Response
+from drf_spectacular.utils import extend_schema
+from utils.swagger_helpers import CustomResponseSerializer
 
 
 # Category Views
@@ -21,7 +23,12 @@ class CategoryListCreateView(generics.ListCreateAPIView):
         if 'slug' not in validated_data or not validated_data.get('slug'):
             validated_data['slug'] = slugify(validated_data.get('name'))
         serializer.save()
-
+    @extend_schema(
+        summary="List Categories (ReadOnly/Admin/Seller)",
+        description="Retrieve all categories. Admins and sellers can see all, read-only users can view only.",
+        request=None,
+        responses=CustomResponseSerializer
+    )
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
@@ -31,7 +38,13 @@ class CategoryListCreateView(generics.ListCreateAPIView):
             message="Category list fetched successfully.",
             data=serializer.data
         )
-
+    
+    @extend_schema(
+        summary="Create Category (Admin/Seller)",
+        description="Create a new category. Only Admins or Sellers can create.",
+        request=CategorySerializer,
+        responses=CustomResponseSerializer
+    )
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
@@ -60,6 +73,12 @@ class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
             validated_data['slug'] = slugify(validated_data['name'])
         serializer.save()
 
+    @extend_schema(
+        summary="Retrieve Category (ReadOnly/Admin/Seller)",
+        description="Get details of a specific category.",
+        request=None,
+        responses=CustomResponseSerializer
+    )
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
@@ -69,7 +88,13 @@ class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
             message="Category details retrieved.",
             data=serializer.data
         )
-
+    
+    @extend_schema(
+        summary="Update Category (Admin/Seller)",
+        description="Update a category's details. Only Admins or Sellers can update.",
+        request=CategorySerializer,
+        responses=CustomResponseSerializer
+    )
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
@@ -82,7 +107,13 @@ class CategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
             message="Category updated successfully.",
             data=serializer.data
         )
-
+    
+    @extend_schema(
+        summary="Delete Category (Admin/Seller)",
+        description="Delete a category. Only Admins or Sellers can delete.",
+        request=None,
+        responses=CustomResponseSerializer
+    )
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         self.perform_destroy(instance)
@@ -111,6 +142,12 @@ class ProductListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(seller=self.request.user)
 
+    @extend_schema(
+        summary="List Products (ReadOnly/Admin/Seller)",
+        description="Retrieve all products. Users with read-only access can view only.",
+        request=None,
+        responses=CustomResponseSerializer
+    )
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset, many=True)
@@ -121,6 +158,12 @@ class ProductListCreateView(generics.ListCreateAPIView):
             data=serializer.data
         )
 
+    @extend_schema(
+        summary="Create Product (Admin/Seller)",
+        description="Create a new product. Only Admins or Sellers can create.",
+        request=ProductSerializer,
+        responses=CustomResponseSerializer
+    )
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -136,6 +179,12 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ProductSerializer
     permission_classes = [ReadOnlyOrAdminOrSeller]
 
+    @extend_schema(
+        summary="Retrieve Product (ReadOnly/Admin/Seller)",
+        description="Get details of a specific product.",
+        request=None,
+        responses=CustomResponseSerializer
+    )
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
@@ -146,6 +195,12 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
             data=serializer.data
         )
     
+    @extend_schema(
+        summary="Update Product (Admin/Seller)",
+        description="Update a product. Only the seller who owns the product or Admin can update.",
+        request=ProductSerializer,
+        responses=CustomResponseSerializer
+    )
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
 
@@ -163,7 +218,13 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
             message="Product updated successfully.",
             data=serializer.data
         )
-
+    
+    @extend_schema(
+        summary="Delete Product (Admin/Seller)",
+        description="Delete a product. Only the seller who owns the product or Admin can delete.",
+        request=None,
+        responses=CustomResponseSerializer
+    )
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
 

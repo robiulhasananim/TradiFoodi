@@ -7,7 +7,24 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
-
+from drf_spectacular.utils import extend_schema, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
+from utils.swagger_helpers import CustomResponseSerializer
+value = {
+                            "success": True,
+                            "status": 201,
+                            "message": "Registration Successful",
+                            "data": {
+                                "user": {
+                                    "email": "john@example.com",
+                                    "role": "customer"
+                                },
+                                "tokens": {
+                                    "access": "<access_token>",
+                                    "refresh": "<refresh_token>"
+                                }
+                            }
+                        }
 # generate jwt token manually 
 def get_tokens_for_user(user):
     if not user.is_active:
@@ -22,12 +39,10 @@ def get_tokens_for_user(user):
 
 class UserRegistrationView(APIView):
     @extend_schema(
-        request=UserRegistrationSerializer,
-        responses={
-            201: UserRegistrationSerializer,  # Successful registration response
-            400: UserRegistrationSerializer   # Validation errors
-        },
-        description="Register a new user with email, first_name, last_name, password, and role"
+    summary="Register a new user (Public)",
+    description="Anyone can register a new user with email, name, password and role (`admin`, `seller`, `customer`).",
+    request=UserRegistrationSerializer,
+    responses=CustomResponseSerializer,
     )
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
@@ -50,7 +65,9 @@ class UserRegistrationView(APIView):
     
 class UserLoginView(APIView):
     @extend_schema(
+        summary="Login User (Public)",
         request=UserLoginSerializer,
+        responses=CustomResponseSerializer
     )
     def post(self, request):
         serializer = UserLoginSerializer(data=request.data)
@@ -79,7 +96,9 @@ class UserLoginView(APIView):
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
     @extend_schema(
-        request=UserProfileSerializer,
+        summary="Get User Profile (Authenticated)",
+        request=None,
+        responses=CustomResponseSerializer
     )
     def get(self, request):
         serializer = UserProfileSerializer(request.user)
@@ -89,7 +108,9 @@ class UserChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        summary="Change Password (Authenticated)",
         request=UserChangePasswordSerializer,
+        responses=CustomResponseSerializer
     )
     def post(self, request):
         serializer = UserChangePasswordSerializer(data=request.data, context={'user':request.user})
@@ -108,7 +129,9 @@ class UserChangePasswordView(APIView):
     
 class SendPasswordResetEmailView(APIView):
     @extend_schema(
+        summary="Send Password Reset Email (Public)",
         request=SendPasswordResetEmailSerializer,
+        responses=CustomResponseSerializer
     )
     def post(self, request):
         serializer = SendPasswordResetEmailSerializer(data=request.data)
@@ -123,7 +146,9 @@ class SendPasswordResetEmailView(APIView):
     
 class UserPasswordResetView(APIView):
     @extend_schema(
+        summary="Reset Password (Public)",
         request=UserPasswordResetSerializer,
+        responses=CustomResponseSerializer
     )
     def post(self,request,uid,token ):
         serializer = UserPasswordResetSerializer(data=request.data, context= {'uid':uid, 'token':token})
@@ -140,7 +165,9 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
+        summary="Logout User (Authenticated)",
         request=LogoutSerializer,
+        responses=CustomResponseSerializer
     )
     def post(self, request):
         serializer = LogoutSerializer(data=request.data)
