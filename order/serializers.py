@@ -4,6 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 from .models import Order, OrderItem, PAYMENT_METHOD_CHOICES
 from product.models import Product
+from drf_spectacular.utils import extend_schema_field
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -30,7 +31,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'price': {'read_only': True},  # backend sets price
         }
-
+    
+    @extend_schema_field(serializers.DecimalField(max_digits=10, decimal_places=2))
     def get_subtotal(self, obj):
         return obj.subtotal()
 

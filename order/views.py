@@ -1,18 +1,33 @@
 # views.py
 from rest_framework import generics, permissions, filters
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.permissions import IsAuthenticated
 from rest_framework import status as drf_status
 from .models import Order
 from .serializers import OrderSerializer
-from utils.helpers import Response  
+from utils.helpers import Response 
+from drf_spectacular.utils import extend_schema,extend_schema_view
+from utils.swagger_helpers import CustomResponseSerializer
+from account.permission import ReadOnlyOrAdmin,IsAdminOrSeller
 
 # ---------- USER / GUEST VIEWS ----------
-
+@extend_schema_view(
+    get=extend_schema(
+        summary="List Orders (Authenticated users/admin/seller)",
+        description="Admin or Seller can see all orders, regular users see only their own. Guests cannot list orders.",
+        responses=CustomResponseSerializer
+    ),
+    post=extend_schema(
+        summary="Create Order (Guest or Authenticated User)",
+        description="Anyone can create an order, no authentication required.",
+        request=OrderSerializer,
+        responses=CustomResponseSerializer
+    )
+)
 class OrderListCreateView(generics.ListCreateAPIView):
     """
-    - Authenticated users can list their own orders
-    - Guests can create orders
+    - Admin/Seller: Can list all orders
+    - Authenticated user: Can list only their own orders
+    - Guests: Can create orders, cannot list orders
     """
     serializer_class = OrderSerializer
     permission_classes = [permissions.AllowAny]
@@ -31,7 +46,9 @@ class OrderListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         if user.is_authenticated:
-            return Order.objects.filter().order_by('-created_at')
+            if getattr(user, 'role', None) in ['admin', 'seller']:
+                return Order.objects.all().order_by('-created_at')
+            return Order.objects.filter(user=user).order_by('-created_at')
         return Order.objects.none()
 
     def list(self, request, *args, **kwargs):
@@ -51,19 +68,31 @@ class OrderListCreateView(generics.ListCreateAPIView):
 
 
 # ---------- SINGLE ORDER RETRIEVE & UPDATE ----------
-
+@extend_schema_view(
+    get=extend_schema(
+        summary="Retrieve Single Order (Authenticated users/admin/seller)",
+        description="Admin/Seller can retrieve any order, regular users can retrieve only their own order.",
+        responses=CustomResponseSerializer
+    ),
+    patch=extend_schema(
+        summary="Update Order and Payment Status (Admin/Seller Only)",
+        description="Only Admin or Seller can update `status` or `payment_status`. Regular users cannot update.",
+        request=OrderSerializer,
+        responses=CustomResponseSerializer
+    )
+)
 class OrderDetailUpdateAPIView(generics.RetrieveUpdateAPIView):
     """
-    Retrieve a single order and allow admin/staff to update
-    only status or payment_status.
+    - Admin/Seller: Can retrieve any order and update only `status` or `payment_status`
+    - Regular user: Can retrieve only their own order
     """
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminOrSeller]
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_staff or getattr(user, 'role', None) == 'admin':
+        if getattr(user, 'role', None) in ['admin', 'seller'] or user.is_staff:
             return Order.objects.all()
         return Order.objects.filter(user=user)
 
