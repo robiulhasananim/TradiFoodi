@@ -7,24 +7,8 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiResponse
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample
 from utils.swagger_helpers import CustomResponseSerializer
-value = {
-                            "success": True,
-                            "status": 201,
-                            "message": "Registration Successful",
-                            "data": {
-                                "user": {
-                                    "email": "john@example.com",
-                                    "role": "customer"
-                                },
-                                "tokens": {
-                                    "access": "<access_token>",
-                                    "refresh": "<refresh_token>"
-                                }
-                            }
-                        }
+
 # generate jwt token manually 
 def get_tokens_for_user(user):
     if not user.is_active:
@@ -39,10 +23,10 @@ def get_tokens_for_user(user):
 
 class UserRegistrationView(APIView):
     @extend_schema(
-    summary="Register a new user (Public)",
-    description="Anyone can register a new user with email, name, password and role (`admin`, `seller`, `customer`).",
-    request=UserRegistrationSerializer,
-    responses=CustomResponseSerializer,
+        summary="Register a new user (Public)",
+        description="Anyone can register a new user with email, name, password and role (`admin`, `seller`, `customer`).",
+        request=UserRegistrationSerializer,
+        responses=CustomResponseSerializer,
     )
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
