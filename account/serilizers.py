@@ -11,7 +11,18 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'password', 'password2', 'role']
+        fields = [
+            'email',
+            'first_name',
+            'last_name',
+            'phone',
+            'street_address',
+            'city',
+            'postal_code',
+            'password',
+            'password2',
+            'role'
+        ]
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -25,8 +36,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Role is required. Please specify a valid role.")
         return attrs
     
-    def create(self, validate_data):
-        return User.objects.create_user(**validate_data)
+    def create(self, validated_data):
+        validated_data.pop('password2')  
+        return User.objects.create_user(**validated_data)
 
 class UserLoginSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(max_length=255)
@@ -37,7 +49,17 @@ class UserLoginSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id','email', 'first_name', 'last_name', 'role']
+        fields = [
+            'id',
+            'email',
+            'first_name',
+            'last_name',
+            'phone',
+            'street_address',
+            'city',
+            'postal_code',
+            'role'
+        ]
 
 class UserChangePasswordSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=255, write_only=True)
