@@ -29,18 +29,12 @@ ORDER_STATUS_CHOICES = (
 )
 
 class Order(models.Model):
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
-    order_id = models.CharField(max_length=15, unique=True, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    order_id = models.CharField(max_length=20, unique=True, editable=False)
     
-    # Guest & user both
-    customer_name = models.CharField(max_length=255, blank=True, null=True)
-    contact_number = models.CharField(max_length=20)
-    customer_email = models.EmailField(max_length=255, blank=True, null=True)
-    delivery_address = models.TextField()
-    delivery_city = models.CharField(max_length=100)
     delivery_note = models.TextField(blank=True, null=True)
 
-    # manual payment handel
+    # manual payment handle
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, blank=True, null=True)
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
@@ -52,20 +46,26 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.order_id:
-            self.order_id = 'ORD-' + uuid.uuid4().hex[:6].upper()
+            self.order_id = 'ORD-' + uuid.uuid4().hex[:10].upper()
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.order_id} - {self.customer_name or self.user}"
+        return f"{self.order_id} - {self.user}"
 
 
 class OrderItem(models.Model):
+    item_id = models.CharField(max_length=25, unique=True, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
     size = models.CharField(max_length=50, blank=True, null=True)
     color = models.CharField(max_length=30, blank=True, null=True)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=12, decimal_places=2)  # price at the time of order (per unit)
+
+    def save(self, *args, **kwargs):
+        if not self.item_id:
+            self.item_id = 'ITM-' + uuid.uuid4().hex[:10].upper()
+        super().save(*args, **kwargs)
 
     def subtotal(self):
         price = self.price or Decimal('0.00')

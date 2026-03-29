@@ -1,41 +1,43 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 
 # custom user manager 
 class UserManager(BaseUserManager):
-    def create_user(self, email, role, first_name, last_name="", password=None, password2=None, phone=None):
+    def create_user(self, email, role, first_name, last_name="", password=None, **extra_fields):
         """
-        Creates and saves a User with the given email,first_name,last_name, role and password.
+        Creates and saves a User with the given email, role, and other fields.
         """
         if not email:
             raise ValueError("Users must have an email address")
 
         user = self.model(
             email=self.normalize_email(email),
-            role = role,
-            first_name = first_name,
-            last_name = last_name,
-            phone = phone
+            role=role,
+            first_name=first_name,
+            last_name=last_name,
+            **extra_fields
         )
 
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, first_name, last_name="", password=None):
+    def create_superuser(self, email, first_name, last_name="", password=None, **extra_fields):
         """
-        Creates and saves a superuser with the given email, first_name,last_name, role and password.
+        Creates and saves a superuser with the given email and other fields.
         """
-        user = self.create_user(
-            email,
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_active', True)
+
+        return self.create_user(
+            email=email,
             password=password,
             role="admin",
             first_name=first_name,
             last_name=last_name,
+            **extra_fields
         )
-        user.is_superuser = True
-        user.save(using=self._db)
-        return user
 
 # Custom User Model 
 class User(AbstractBaseUser):
@@ -44,6 +46,7 @@ class User(AbstractBaseUser):
         ('seller', 'Seller'),
         ('admin', 'Admin'),
     ]
+    uid = models.CharField(max_length=20, unique=True, editable=False)
     email = models.EmailField(
         verbose_name="email address",
         max_length=255,
@@ -54,9 +57,10 @@ class User(AbstractBaseUser):
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
 
-    street_address = models.CharField(max_length=255, null=True, blank=True)
+    address = models.CharField(max_length=255, null=True, blank=True)
     city = models.CharField(max_length=100, null=True, blank=True)
     postal_code = models.CharField(max_length=20, null=True, blank=True)
+    avatar = models.URLField(max_length=500, null=True, blank=True)
     
     is_active = models.BooleanField(default=True)
     is_superuser = models.BooleanField(default=False)
@@ -67,6 +71,11 @@ class User(AbstractBaseUser):
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name"]
+
+    def save(self, *args, **kwargs):
+        if not self.uid:
+            self.uid = 'USR-' + uuid.uuid4().hex[:10].upper()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.email

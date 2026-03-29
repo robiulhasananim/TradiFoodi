@@ -1,28 +1,41 @@
 from rest_framework import serializers
-from .models import Product, Category
+from .models import Product, Category, Review
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'name', 'description', 'slug']
-        read_only_fields = ['slug']
+        fields = ['cat_id', 'name', 'slug', 'image', 'description']
+        read_only_fields = ['cat_id', 'slug']
+
+class ReviewSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(read_only=True)
+    class Meta:
+        model = Review
+        fields = ['review_id', 'user', 'rating', 'comment', 'createdAt']
+        read_only_fields = ['review_id', 'user', 'createdAt']
 
 class ProductSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
-    category_id = serializers.PrimaryKeyRelatedField(
+    category_id = serializers.SlugRelatedField(
         queryset=Category.objects.all(),
+        slug_field='cat_id',
         source='category',
         write_only=True
     )
-    seller = serializers.StringRelatedField(read_only=True)  
+    seller = serializers.StringRelatedField(read_only=True)
+    rating = serializers.FloatField(source='rating_avg', read_only=True, default=0)
+    reviewCount = serializers.IntegerField(source='review_count', read_only=True, default=0)
+
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'description', 'price', 'stock', 'sold', 'category', 'category_id',
-            'seller','thumbnail','images','sizes', 'color', 'is_active', 'created_at', 'updated_at'
+            'product_id', 'name', 'description', 'price', 'originalPrice', 'stock', 'sold', 
+            'category', 'category_id', 'seller', 'thumbnail', 'images', 
+            'ingredients', 'preparationTime', 'servingSize',
+            'sizes', 'color', 'isAvailable', 'rating', 'reviewCount', 'created_at', 'updated_at'
         ]
     
-    read_only_fields = ['sold','seller', 'created_at', 'updated_at']
+    read_only_fields = ['product_id', 'sold','seller', 'created_at', 'updated_at', 'rating', 'reviewCount']
     extra_kwargs = {
         'name': {'required': True},
         'description': {'required': True},

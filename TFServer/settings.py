@@ -50,7 +50,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'utils.pagination.CustomPagination',
     'PAGE_SIZE': 10,
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend'
@@ -61,6 +61,14 @@ REST_FRAMEWORK = {
     ),
     # for custom exception handle 
     'EXCEPTION_HANDLER': 'utils.exceptions.custom_exception_handler'
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Tradi Foodi API',
+    'DESCRIPTION': 'Production-ready backend for Tradi Foodi e-commerce platform.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
 }
 
 
@@ -164,9 +172,8 @@ AUTH_USER_MODEL = 'account.User'
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
-    # Refresh rotation enabled for new refresh token every rotation
-    # 'ROTATE_REFRESH_TOKENS': True,  
-    # 'BLACKLIST_AFTER_ROTATION': True,
+    'USER_ID_FIELD': 'uid',
+    'USER_ID_CLAIM': 'user_id',
 }
 
 

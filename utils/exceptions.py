@@ -18,25 +18,26 @@ def custom_exception_handler(exc, context):
             message = data.get('detail', str(exc))
             errors = {k: v for k, v in data.items() if k != 'detail'}
         elif isinstance(data, list):
-        # For list errors (nested serializer)
+            # For list errors (nested serializer)
             message = "Validation error"
             errors = data
         else:
             message = str(exc)
             errors = {}
-    return Response(
-        success=False,
-        status=response.status_code,
-        message=message,
-        errors=errors
-    )
+        
+        return Response(
+            success=False,
+            status=response.status_code,
+            message=message,
+            errors=errors
+        )
 
-    # Unhandled exceptions (e.g. DB errors)
+    # Unhandled exceptions (e.g. DB or configuration errors)
     # logger.error(f"Unhandled Exception in {view}: {exc}", exc_info=True)
     if isinstance(exc, DatabaseError):
         message = "Database error occurred. Please try again later."
     else:
-        message = "Something went wrong. Please contact support."
+        message = str(exc) or "Something went wrong. Please contact support."
 
     return Response(
         success=False,
