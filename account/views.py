@@ -1,13 +1,22 @@
 from utils.helpers import Response
 from rest_framework import status 
 from rest_framework.views import APIView
-from .serilizers import UserLoginSerializer,UserRegistrationSerializer,UserProfileSerializer,UserChangePasswordSerializer,SendPasswordResetEmailSerializer,UserPasswordResetSerializer,LogoutSerializer
+from .serializers import (
+    UserLoginSerializer,
+    UserRegistrationSerializer,
+    UserProfileSerializer,
+    UserChangePasswordSerializer,
+    SendPasswordResetEmailSerializer,
+    UserPasswordResetSerializer,
+    LogoutSerializer,
+    AuthResponseSerializer
+)
 from drf_spectacular.utils import extend_schema
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
-from utils.swagger_helpers import CustomResponseSerializer
+from utils.swagger_helpers import wrapped_response_serializer
 
 # generate jwt token manually 
 def get_tokens_for_user(user):
@@ -26,7 +35,7 @@ class UserRegistrationView(APIView):
         summary="Register a new user (Public)",
         description="Anyone can register a new user with email, name, password and role (`admin`, `seller`, `customer`).",
         request=UserRegistrationSerializer,
-        responses=CustomResponseSerializer,
+        responses=wrapped_response_serializer(AuthResponseSerializer),
     )
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
@@ -51,7 +60,7 @@ class UserLoginView(APIView):
     @extend_schema(
         summary="Login User (Public)",
         request=UserLoginSerializer,
-        responses=CustomResponseSerializer
+        responses=wrapped_response_serializer(AuthResponseSerializer)
     )
     def post(self, request):
         serializer = UserLoginSerializer(data=request.data)
@@ -69,8 +78,9 @@ class UserLoginView(APIView):
                     message="Authentication Failed",
                     errors={"detail": str(e)}
                     )
+                user_serializer = UserProfileSerializer(user)
                 return Response(message="Login Successful", data={
-                "user": serializer.data,
+                "user": user_serializer.data,
                 "tokens": tokens
                 })
             else:
@@ -82,11 +92,23 @@ class UserProfileView(APIView):
     @extend_schema(
         summary="Get User Profile (Authenticated)",
         request=None,
-        responses=CustomResponseSerializer
+        responses=wrapped_response_serializer(UserProfileSerializer)
     )
     def get(self, request):
         serializer = UserProfileSerializer(request.user)
         return Response(message="User info retrieved successfully", data=serializer.data)
+    
+    @extend_schema(
+        summary="Update User Profile (Authenticated)",
+        request=UserProfileSerializer,
+        responses=wrapped_response_serializer(UserProfileSerializer)
+    )
+    def patch(self, request):
+        serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(message="Profile updated successfully", data=serializer.data)
+        return Response(success=False, status=status.HTTP_400_BAD_REQUEST, message="Profile update failed", errors=serializer.errors)
     
 class UserChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
@@ -94,7 +116,7 @@ class UserChangePasswordView(APIView):
     @extend_schema(
         summary="Change Password (Authenticated)",
         request=UserChangePasswordSerializer,
-        responses=CustomResponseSerializer
+        responses=wrapped_response_serializer()
     )
     def post(self, request):
         serializer = UserChangePasswordSerializer(data=request.data, context={'user':request.user})
@@ -115,7 +137,7 @@ class SendPasswordResetEmailView(APIView):
     @extend_schema(
         summary="Send Password Reset Email (Public)",
         request=SendPasswordResetEmailSerializer,
-        responses=CustomResponseSerializer
+        responses=wrapped_response_serializer()
     )
     def post(self, request):
         serializer = SendPasswordResetEmailSerializer(data=request.data)
@@ -132,7 +154,7 @@ class UserPasswordResetView(APIView):
     @extend_schema(
         summary="Reset Password (Public)",
         request=UserPasswordResetSerializer,
-        responses=CustomResponseSerializer
+        responses=wrapped_response_serializer()
     )
     def post(self,request,uid,token ):
         serializer = UserPasswordResetSerializer(data=request.data, context= {'uid':uid, 'token':token})
@@ -151,7 +173,7 @@ class LogoutView(APIView):
     @extend_schema(
         summary="Logout User (Authenticated)",
         request=LogoutSerializer,
-        responses=CustomResponseSerializer
+        responses=wrapped_response_serializer()
     )
     def post(self, request):
         serializer = LogoutSerializer(data=request.data)

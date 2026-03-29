@@ -6,31 +6,31 @@ from .models import Order
 from .serializers import OrderSerializer
 from utils.helpers import Response 
 from drf_spectacular.utils import extend_schema,extend_schema_view
-from utils.swagger_helpers import CustomResponseSerializer
+from utils.swagger_helpers import wrapped_response_serializer
 from account.permission import ReadOnlyOrAdmin,IsAdminOrSeller
 
-# ---------- USER / GUEST VIEWS ----------
+# ---------- USER VIEWS ----------
 @extend_schema_view(
     get=extend_schema(
         summary="List Orders (Authenticated users/admin/seller)",
-        description="Admin or Seller can see all orders, regular users see only their own. Guests cannot list orders.",
-        responses=CustomResponseSerializer
+        description="Admin or Seller can see all orders, regular users see only their own. Authentication required.",
+        responses=wrapped_response_serializer(OrderSerializer, many=True)
     ),
     post=extend_schema(
-        summary="Create Order (Guest or Authenticated User)",
-        description="Anyone can create an order, no authentication required.",
+        summary="Create Order (Authenticated User Only)",
+        description="Only authenticated users with a complete profile can create an order. Delivery address is taken from the profile.",
         request=OrderSerializer,
-        responses=CustomResponseSerializer
+        responses=wrapped_response_serializer(OrderSerializer)
     )
 )
 class OrderListCreateView(generics.ListCreateAPIView):
     """
     - Admin/Seller: Can list all orders
     - Authenticated user: Can list only their own orders
-    - Guests: Can create orders, cannot list orders
+    - Requires Authentication
     """
     serializer_class = OrderSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = {
@@ -38,10 +38,9 @@ class OrderListCreateView(generics.ListCreateAPIView):
         'payment_status': ['exact'],
         'total_amount': ['exact', 'gte', 'lte'],
         'created_at': ['gte', 'lte'],
-        'delivery_city': ['exact'],
     }
-    search_fields = ['customer_name', 'customer_email', 'contact_number', 'delivery_city']
-    ordering_fields = ['total_amount', 'created_at', 'delivery_city', 'order_id']
+    search_fields = ['order_id', 'user__email', 'user__first_name', 'user__last_name']
+    ordering_fields = ['total_amount', 'created_at', 'order_id']
 
     def get_queryset(self):
         user = self.request.user
@@ -52,19 +51,24 @@ class OrderListCreateView(generics.ListCreateAPIView):
         return Order.objects.none()
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
         serializer = self.get_serializer(queryset, many=True)
         return Response(data=serializer.data, message="Orders retrieved successfully")
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        return Response(data=serializer.data, message="Order created successfully", status=drf_status.HTTP_201_CREATED)
+        if serializer.is_valid():
+            self.perform_create(serializer)
+            return Response(data=serializer.data, message="Order created successfully", status=drf_status.HTTP_201_CREATED)
+        return Response(success=False, message="Order creation failed", status=drf_status.HTTP_400_BAD_REQUEST, errors=serializer.errors)
 
     def perform_create(self, serializer):
-        user = self.request.user if self.request.user.is_authenticated else None
-        serializer.save(user=user)
+        serializer.save()
 
 
 # ---------- SINGLE ORDER RETRIEVE & UPDATE ----------
@@ -72,13 +76,13 @@ class OrderListCreateView(generics.ListCreateAPIView):
     get=extend_schema(
         summary="Retrieve Single Order (Authenticated users/admin/seller)",
         description="Admin/Seller can retrieve any order, regular users can retrieve only their own order.",
-        responses=CustomResponseSerializer
+        responses=wrapped_response_serializer(OrderSerializer)
     ),
     patch=extend_schema(
         summary="Update Order and Payment Status (Admin/Seller Only)",
         description="Only Admin or Seller can update `status` or `payment_status`. Regular users cannot update.",
         request=OrderSerializer,
-        responses=CustomResponseSerializer
+        responses=wrapped_response_serializer(OrderSerializer)
     )
 )
 class OrderDetailUpdateAPIView(generics.RetrieveUpdateAPIView):
@@ -89,6 +93,8 @@ class OrderDetailUpdateAPIView(generics.RetrieveUpdateAPIView):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     permission_classes = [IsAdminOrSeller]
+    lookup_field = 'order_id'
+    lookup_url_kwarg = 'order_id'
 
     def get_queryset(self):
         user = self.request.user
@@ -105,6 +111,7 @@ class OrderDetailUpdateAPIView(generics.RetrieveUpdateAPIView):
         partial = kwargs.pop('partial', True)  # Allow PATCH only
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(data=serializer.data, message="Order updated successfully")
+        if serializer.is_valid():
+            self.perform_update(serializer)
+            return Response(data=serializer.data, message="Order updated successfully")
+        return Response(success=False, message="Order update failed", status=drf_status.HTTP_400_BAD_REQUEST, errors=serializer.errors)

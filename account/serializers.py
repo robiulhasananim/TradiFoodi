@@ -12,11 +12,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
+            'uid',
             'email',
             'first_name',
             'last_name',
             'phone',
-            'street_address',
+            'address',
             'city',
             'postal_code',
             'password',
@@ -24,7 +25,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'role'
         ]
         extra_kwargs = {
-            'password': {'write_only': True}
+            'password': {'write_only': True},
+            'uid': {'read_only': True}
         }
 
     def validate(self, attrs):
@@ -50,16 +52,18 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id',
+            'uid',
             'email',
             'first_name',
             'last_name',
             'phone',
-            'street_address',
+            'avatar',
+            'address',
             'city',
             'postal_code',
             'role'
         ]
+        read_only_fields = ['uid', 'role']
 
 class UserChangePasswordSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=255, write_only=True)
@@ -129,3 +133,10 @@ class UserPasswordResetSerializer(serializers.Serializer):
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
 
+class TokenSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+    access = serializers.CharField()
+
+class AuthResponseSerializer(serializers.Serializer):
+    user = UserProfileSerializer()
+    tokens = TokenSerializer()
